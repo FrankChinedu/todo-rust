@@ -14,6 +14,7 @@ struct Cli {
 #[derive(Subcommand, Debug, Clone)]
 enum Commands {
     Add(AddArgs),
+    List,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -27,5 +28,6 @@ fn main() {
         Commands::Add(args) => {
             Task::create(args.name.clone());
         }
+        Commands::List => Task::list(),
     }
 }

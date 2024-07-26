@@ -1,4 +1,4 @@
-use serde_json::{from_str, json, to_string_pretty, Value};
+use serde_json::{from_str, from_value, json, to_string_pretty, Value};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::Path;
@@ -27,6 +27,11 @@ impl DB {
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
         Ok(from_str(&contents).unwrap_or_else(|_| json!([])))
+    }
+
+    pub fn get_all_tasks() -> Result<Vec<Task>, Box<dyn std::error::Error>> {
+        let values = DB::read_json_from_file()?;
+        Ok(from_value(values).unwrap())
     }
 
     fn update_tasks(tasks: Vec<Task>, data: &mut Value) -> &mut Vec<Value> {
