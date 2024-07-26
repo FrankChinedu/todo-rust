@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Task {
-    id: u16,
+    id: u8,
     description: String,
     completed: bool,
 }
@@ -13,13 +13,14 @@ pub struct Task {
 impl Task {
     fn new(description: String) -> Self {
         let mut rng = rand::thread_rng();
-        let id = rng.gen_range(0..1000);
+        let id = rng.gen_range(0..=std::u8::MAX);
         Task {
             id,
             description,
             completed: false,
         }
     }
+
     pub fn create(descriptions: Vec<String>) {
         let mut tasks: Vec<Task> = vec![];
         for val in descriptions {
@@ -30,7 +31,7 @@ impl Task {
                 println!("res : {res}")
             }
             Err(e) => {
-                println!("DB create : {e}")
+                println!("DB create : {:?}", e)
             }
         };
     }

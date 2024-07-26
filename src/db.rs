@@ -1,61 +1,50 @@
 use serde_json::{from_str, json, to_string_pretty, Value};
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
+use std::path::Path;
 
 use crate::task::Task;
 
 #[allow(dead_code)]
 pub struct DB;
-
+const FILE_PATH: &str = "data.json";
 impl DB {
-    pub fn save(tasks: Vec<Task>) -> Result<String, String> {
-        let file_option = OpenOptions::new()
+    pub fn save(tasks: Vec<Task>) -> Result<String, Box<dyn std::error::Error>> {
+        let mut file_value = Self::read_json_from_file()?;
+
+        let data = DB::update_tasks(tasks, &mut file_value);
+
+        Self::write_json_to_file(FILE_PATH, data)?;
+        Ok("created".to_owned())
+    }
+
+    fn read_json_from_file() -> Result<Value, Box<dyn std::error::Error>> {
+        let mut file = OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
-            .truncate(true)
-            .open("data.json");
+            .open(FILE_PATH)?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)?;
+        Ok(from_str(&contents).unwrap_or_else(|_| json!([])))
+    }
 
-        match file_option {
-            Ok(mut file) => {
-                let mut contents = String::new();
-                match file.read_to_string(&mut contents) {
-                    Ok(_) => {
-                        let mut data: Value = from_str(&contents).unwrap_or_else(|_| json!([]));
-
-                        if let Some(array) = data.as_array_mut() {
-                            for task in tasks {
-                                let item = serde_json::to_value(task).unwrap();
-                                array.push(item);
-                            }
-                        } else {
-                            for task in tasks {
-                                let item = serde_json::to_value(task).unwrap();
-                                data = Value::Array(vec![data, item]);
-                            }
-                        }
-                        let updated_json = to_string_pretty(&data).unwrap();
-                        return match file.write_all(updated_json.as_bytes()) {
-                            Ok(_) => {
-                                println!("created");
-                                Ok("created".to_owned())
-                            }
-                            Err(e) => {
-                                eprintln!("lasr e {:?}", e);
-                                Err("Last erro".to_owned())
-                            }
-                        };
-                    }
-                    Err(e) => {
-                        eprintln!("e {:?}", e);
-                        Err("FAILED".to_owned())
-                    }
-                }
-            }
-            Err(e) => {
-                println!("unaable to read {:?}", e);
-                Err("error occured".to_owned())
-            }
+    fn update_tasks(tasks: Vec<Task>, data: &mut Value) -> &mut Vec<Value> {
+        let array = data.as_array_mut().unwrap();
+        for task in tasks {
+            let item = serde_json::to_value(task).unwrap();
+            array.push(item);
         }
+        array
+    }
+
+    fn write_json_to_file<P: AsRef<Path>>(
+        path: P,
+        data: &mut Vec<Value>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::create(path)?;
+        let json_string = to_string_pretty(data)?;
+        file.write_all(json_string.as_bytes())?;
+        Ok(())
     }
 }
